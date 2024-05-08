@@ -1,0 +1,5 @@
+package component:client;
+
+world example {
+    export count: func(data: list<u8>, target: u8) -> u64;
+}
