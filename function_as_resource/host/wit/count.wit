@@ -1,0 +1,14 @@
+package host:c-package;
+
+interface countt {
+    resource counter {
+      constructor();
+      count: func(data: list<u8>, target: u8) -> u64;
+    }
+}
+
+
+world count {
+    export countt;
+    import just: func() -> u32;
+}
