@@ -10,5 +10,4 @@ interface countt {
 
 world count {
     export countt;
-    import just: func() -> u32;
 }
