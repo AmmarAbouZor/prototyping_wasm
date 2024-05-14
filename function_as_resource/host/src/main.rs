@@ -7,10 +7,30 @@ use wasmtime::{
     component::{bindgen, Component, Linker},
     Config, Engine, Store,
 };
+use wasmtime_wasi::{ResourceTable, WasiCtx, WasiCtxBuilder, WasiView};
 
-const WASM_FILE_PATH: &str = "../client/target/wasm32-unknown-unknown/release/client.wasm";
+const WASM_FILE_PATH: &str = "../client/target/wasm32-wasi/release/client.wasm";
 
-struct MyStatus;
+struct MyStatus {
+    ctx: WasiCtx,
+    table: ResourceTable,
+}
+
+impl MyStatus {
+    fn new(ctx: WasiCtx, table: ResourceTable) -> Self {
+        Self { ctx, table }
+    }
+}
+
+impl WasiView for MyStatus {
+    fn table(&mut self) -> &mut ResourceTable {
+        &mut self.table
+    }
+
+    fn ctx(&mut self) -> &mut WasiCtx {
+        &mut self.ctx
+    }
+}
 
 bindgen!();
 
@@ -46,9 +66,13 @@ fn calc_wasm(bytes: &[u8], target: u8, cycle: usize) -> Duration {
 
     let component = Component::from_file(&engine, file_path).unwrap();
 
-    let linker = Linker::new(&engine);
+    let ctx = WasiCtxBuilder::new().build();
+    let table = ResourceTable::new();
 
-    let mut store = Store::new(&engine, MyStatus);
+    let mut linker = Linker::new(&engine);
+    wasmtime_wasi::add_to_linker_sync(&mut linker).unwrap();
+
+    let mut store = Store::new(&engine, MyStatus::new(ctx, table));
 
     let (count, _instance) = Count::instantiate(&mut store, &component, &linker).unwrap();
 
