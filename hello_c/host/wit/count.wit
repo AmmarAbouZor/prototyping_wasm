@@ -1,0 +1,6 @@
+package example:coun;
+
+world counting {
+  import print: func(msg: string);
+  export count: func(bytes: list<u8>, target: option<u8>) -> result<u64, string>;
+}
