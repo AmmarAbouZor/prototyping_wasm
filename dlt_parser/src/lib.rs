@@ -17,37 +17,33 @@ struct PluginParser;
 export!(PluginParser);
 
 fn parse_intern<'a>(
-    parser: &'static mut DltParser<'static>,
-    data: &'a [u8],
+    parser: &mut DltParser<'static>,
+    data: &[u8],
     timestamp: Option<u64>,
-) -> impl IntoIterator<Item = Result<ParseReturn, ParseError>> + 'a {
-    parser
-        .parse(data, timestamp)
-        .into_iter()
-        .map(|native_res| match native_res {
-            Ok((offset, yld_opt)) => {
-                let ret_val = match yld_opt {
-                    Some(yld) => match yld {
-                        parsers::ParseYield::Message(msg) => {
-                            Some(ParseYield::Message(msg.to_string()))
-                        }
-                        parsers::ParseYield::Attachment(att) => {
-                            Some(ParseYield::Attachment(att.into()))
-                        }
-                        parsers::ParseYield::MessageAndAttachment((msg, att)) => Some(
-                            ParseYield::MessageAndAttachment((msg.to_string(), att.into())),
-                        ),
-                    },
-                    None => None,
-                };
+) -> Result<ParseReturn, ParseError> {
+    match parser.parse(data, timestamp) {
+        Ok((remain, opt)) => {
+            let offset = (data.len() - remain.len()) as u64;
+            let ret_val = match opt {
+                Some(yld) => match yld {
+                    parsers::ParseYield::Message(msg) => Some(ParseYield::Message(msg.to_string())),
+                    parsers::ParseYield::Attachment(att) => {
+                        Some(ParseYield::Attachment(att.into()))
+                    }
+                    parsers::ParseYield::MessageAndAttachment((msg, att)) => Some(
+                        ParseYield::MessageAndAttachment((msg.to_string(), att.into())),
+                    ),
+                },
+                None => None,
+            };
 
-                Ok(ParseReturn {
-                    consumed: offset as u64,
-                    value: ret_val,
-                })
-            }
-            Err(err) => Err(err.into()),
-        })
+            Ok(ParseReturn {
+                consumed: offset,
+                value: ret_val,
+            })
+        }
+        Err(err) => Err(err.into()),
+    }
 }
 
 impl Guest for PluginParser {
@@ -73,22 +69,41 @@ impl Guest for PluginParser {
         data: _rt::Vec<u8>,
         timestamp: Option<u64>,
     ) -> _rt::Vec<Result<ParseReturn, ParseError>> {
+        let mut results = Vec::new();
+        let mut slice = &data[0..];
         // SAFETY: all functions on the host take mutable reference and can't be called
         // concurrently
-        unsafe {
-            parse_intern(PARSER.as_mut().unwrap(), &data, timestamp)
-                .into_iter()
-                .collect()
+        let parser = unsafe { PARSER.as_mut().unwrap() };
+        loop {
+            match parse_intern(parser, slice, timestamp) {
+                Ok(res) => {
+                    slice = &slice[res.consumed as usize..];
+                    results.push(Ok(res));
+                }
+                Err(err) => {
+                    results.push(Err(err));
+                    return results;
+                }
+            }
         }
     }
 
     fn parse_with_add(data: _rt::Vec<u8>, timestamp: Option<u64>) {
+        let mut slice = &data[0..];
         // SAFETY: all functions on the host take mutable reference and can't be called
         // concurrently
-        unsafe {
-            parse_intern(PARSER.as_mut().unwrap(), &data, timestamp)
-                .into_iter()
-                .for_each(|res| add(res.as_ref()));
+        let parser = unsafe { PARSER.as_mut().unwrap() };
+        loop {
+            match parse_intern(parser, slice, timestamp) {
+                Ok(res) => {
+                    slice = &slice[res.consumed as usize..];
+                    add(Ok(&res));
+                }
+                Err(err) => {
+                    add(Err(&err));
+                    return;
+                }
+            }
         }
     }
 }
@@ -109,7 +124,6 @@ impl From<parsers::Attachment> for Attachment {
 impl From<parsers::Error> for ParseError {
     fn from(err: parsers::Error) -> Self {
         match err {
-            parsers::Error::Unrecoverable(msg) => ParseError::Unrecoverable(msg),
             parsers::Error::Parse(msg) => ParseError::Parse(msg),
             parsers::Error::Incomplete => ParseError::Incomplete,
             parsers::Error::Eof => ParseError::Eof,

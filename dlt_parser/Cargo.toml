@@ -6,8 +6,8 @@ edition = "2021"
 [dependencies]
 wit-bindgen-rt = { version = "0.26", features = ["bitflags"] }
 wit-bindgen = "0.26"
-# Path depends on chipmunk local clone
-parsers = {path = "../../chipmunk/application/apps/indexer/parsers"}
+# Path depends on chipmunk local copy of `exp_plugin_support` branch because DLT parser can be compiled to WASM
+parsers = {path = "../../chipmunk-exp/application/apps/indexer/parsers"}
 
 [lib]
 crate-type = ["cdylib"]
