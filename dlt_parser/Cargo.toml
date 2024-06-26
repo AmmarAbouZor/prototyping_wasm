@@ -1,0 +1,18 @@
+[package]
+name = "dlt_parser"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+wit-bindgen-rt = { version = "0.26", features = ["bitflags"] }
+wit-bindgen = "0.26"
+# Path depends on chipmunk local clone
+parsers = {path = "../../chipmunk/application/apps/indexer/parsers"}
+
+[lib]
+crate-type = ["cdylib"]
+
+[package.metadata.component]
+package = "component:dlt-parser"
+
+[package.metadata.component.dependencies]
