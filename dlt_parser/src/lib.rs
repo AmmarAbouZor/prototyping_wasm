@@ -1,13 +1,14 @@
+use chipmunk::plugin::{
+    parse_types::{Attachment, ParseError, ParseReturn, ParseYield, ParserConfig},
+    shared_types::InitError,
+};
+use exports::chipmunk::plugin::parser::Guest;
 use parsers::{dlt::DltParser, Parser};
 use wit_bindgen::generate;
 
 generate!({
     path: "../../chipmunk/application/apps/indexer/plugins_api/wit/v_0.1.0",
-    world: "parser",
-    //TODO AAZ: Check the impact of duplicate_if_necessary on the performance
-    ownership: Borrowing {
-        duplicate_if_necessary: false
-    },
+    world: "parse-plugin",
 });
 
 static mut PARSER: Option<DltParser<'static>> = None;
@@ -97,10 +98,10 @@ impl Guest for PluginParser {
             match parse_intern(parser, slice, timestamp) {
                 Ok(res) => {
                     slice = &slice[res.consumed as usize..];
-                    add(Ok(&res));
+                    chipmunk::plugin::host_add::add(Ok(&res));
                 }
                 Err(err) => {
-                    add(Err(&err));
+                    chipmunk::plugin::host_add::add(Err(&err));
                     return;
                 }
             }
