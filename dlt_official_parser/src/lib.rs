@@ -1,5 +1,6 @@
 use parsers::{dlt::DltParser, Parser as InternParser};
 use plugins_api::{
+    log,
     parser::{Attachment, ParseError, ParseReturn, ParseYield, Parser},
     parser_export,
 };
@@ -10,6 +11,7 @@ struct PluginParser {
 
 impl PluginParser {
     fn new(parser: DltParser<'static>) -> Self {
+        log::error!("CLIENT ERROR: test new called");
         Self { parser }
     }
 }
@@ -71,6 +73,8 @@ impl Parser for PluginParser {
     where
         Self: Sized,
     {
+        log::warn!("CLIENT WARN: test create called");
+
         // This should be read from plugin configs file
         let with_storage_header = true;
 
@@ -85,6 +89,9 @@ impl Parser for PluginParser {
         data: &[u8],
         timestamp: Option<u64>,
     ) -> impl IntoIterator<Item = Result<ParseReturn, ParseError>> + Send {
+        log::warn!("CLIENT WARN: test parse called");
+        log::info!("CLIENT INFO: test parse called");
+        log::trace!("CLIENT TRACE: test parse called");
         let mut results = Vec::new();
         let mut slice = &data[0..];
         loop {
