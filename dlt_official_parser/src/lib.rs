@@ -1,3 +1,5 @@
+use std::iter;
+
 use parsers::{dlt::DltParser, Parser as InternParser};
 use plugins_api::{
     log,
@@ -11,12 +13,12 @@ struct PluginParser {
 
 impl PluginParser {
     fn new(parser: DltParser<'static>) -> Self {
-        log::error!("CLIENT ERROR: test new called");
+        log::error!("TEST LOGGING: CLIENT ERROR: New function called");
         Self { parser }
     }
 }
 
-fn parse_intern<'a>(
+fn parse_intern(
     parser: &mut DltParser<'static>,
     data: &[u8],
     timestamp: Option<u64>,
@@ -73,7 +75,7 @@ impl Parser for PluginParser {
     where
         Self: Sized,
     {
-        log::warn!("CLIENT WARN: test create called");
+        log::warn!("TEST LOGGING: CLIENT WARN: Create function called");
 
         // This should be read from plugin configs file
         let with_storage_header = true;
@@ -89,23 +91,30 @@ impl Parser for PluginParser {
         data: &[u8],
         timestamp: Option<u64>,
     ) -> impl IntoIterator<Item = Result<ParseReturn, ParseError>> + Send {
-        log::warn!("CLIENT WARN: test parse called");
-        log::info!("CLIENT INFO: test parse called");
-        log::trace!("CLIENT TRACE: test parse called");
-        let mut results = Vec::new();
+        // Test code for log functionality
+        // log::warn!("CLIENT WARN: test parse called");
+        // log::info!("CLIENT INFO: test parse called");
+        // log::trace!("CLIENT TRACE: test parse called");
+
         let mut slice = &data[0..];
-        loop {
+        let mut encounter_error = false;
+
+        iter::from_fn(move || {
+            if encounter_error {
+                return None;
+            }
             match parse_intern(&mut self.parser, slice, timestamp) {
                 Ok(res) => {
                     slice = &slice[res.consumed as usize..];
-                    results.push(Ok(res));
+                    Some(Ok(res))
                 }
                 Err(err) => {
-                    results.push(Err(err));
-                    return results;
+                    encounter_error = true;
+                    // log::warn!("Parse encounter error: {:#?}", err);
+                    Some(Err(err))
                 }
             }
-        }
+        })
     }
 }
 
