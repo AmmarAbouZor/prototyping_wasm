@@ -5,7 +5,7 @@ edition = "2021"
 
 [dependencies]
 plugins_api = {path = "../../chipmunk/application/apps/indexer/plugins_api", features = ["parser"]}
-parsers = {path = "../../chipmunk-exp/application/apps/indexer/parsers"}
+parsers = {path = "../../chipmunk_one/application/apps/indexer/parsers"}
 
 [lib]
 crate-type = ["cdylib"]

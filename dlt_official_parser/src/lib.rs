@@ -90,31 +90,24 @@ impl Parser for PluginParser {
         &mut self,
         data: &[u8],
         timestamp: Option<u64>,
-    ) -> impl IntoIterator<Item = Result<ParseReturn, ParseError>> + Send {
+    ) -> Result<impl Iterator<Item = ParseReturn>, ParseError> {
         // Test code for log functionality
-        // log::warn!("CLIENT WARN: test parse called");
-        // log::info!("CLIENT INFO: test parse called");
-        // log::trace!("CLIENT TRACE: test parse called");
+        // log::warn!("CLIENT WarN: test parse called");
+        // log::info!("CLIENT Info: test parse called");
+        // log::trace!("CLIENT Trace: test parse called");
 
         let mut slice = &data[0..];
-        let mut encounter_error = false;
 
-        iter::from_fn(move || {
-            if encounter_error {
-                return None;
-            }
-            match parse_intern(&mut self.parser, slice, timestamp) {
-                Ok(res) => {
-                    slice = &slice[res.consumed as usize..];
-                    Some(Ok(res))
-                }
-                Err(err) => {
-                    encounter_error = true;
-                    // log::warn!("Parse encounter error: {:#?}", err);
-                    Some(Err(err))
-                }
-            }
-        })
+        // Return early if function errors on the first call.
+        let first_res = parse_intern(&mut self.parser, slice, timestamp)?;
+
+        // Otherwise keep parsing and stop on first error, returning the parsed items at the end.
+        let iter = iter::successors(Some(first_res), move |res| {
+            slice = &slice[res.consumed as usize..];
+            parse_intern(&mut self.parser, slice, timestamp).ok()
+        });
+
+        Ok(iter)
     }
 }
 
