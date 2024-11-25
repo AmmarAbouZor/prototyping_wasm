@@ -3,7 +3,7 @@ use std::iter;
 use parsers::{dlt::DltParser, Parser as InternParser};
 use plugins_api::{
     log,
-    parser::{Attachment, ParseError, ParseReturn, ParseYield, Parser},
+    parser::{Attachment, ParseError, ParseReturn, ParseYield, ParsedMessage, Parser},
     parser_export,
 };
 
@@ -18,6 +18,9 @@ impl PluginParser {
     }
 }
 
+// Used to test returning parse as columns
+// const DLT_COLUMN_SENTINAL: char = '\u{0004}';
+
 fn parse_intern(
     parser: &mut DltParser<'static>,
     data: &[u8],
@@ -28,13 +31,37 @@ fn parse_intern(
             let offset = (data.len() - remain.len()) as u64;
             let ret_val = match opt {
                 Some(yld) => match yld {
-                    parsers::ParseYield::Message(msg) => Some(ParseYield::Message(msg.to_string())),
+                    parsers::ParseYield::Message(msg) => {
+                        // let msg = msg.to_string();
+                        // let columns: Vec<_> = msg
+                        //     .split(DLT_COLUMN_SENTINAL)
+                        //     .map(|p| p.to_owned())
+                        //     .collect();
+                        //
+                        // Some(ParseYield::Message(ParsedMessage::Columns(columns)))
+
+                        Some(ParseYield::Message(ParsedMessage::Line(msg.to_string())))
+                    }
                     parsers::ParseYield::Attachment(att) => {
                         Some(ParseYield::Attachment(attachment_from(att)))
                     }
-                    parsers::ParseYield::MessageAndAttachment((msg, att)) => Some(
-                        ParseYield::MessageAndAttachment((msg.to_string(), attachment_from(att))),
-                    ),
+                    parsers::ParseYield::MessageAndAttachment((msg, att)) => {
+                        // let msg = msg.to_string();
+                        // let columns: Vec<_> = msg
+                        //     .split(DLT_COLUMN_SENTINAL)
+                        //     .map(|p| p.to_owned())
+                        //     .collect();
+                        //
+                        // Some(ParseYield::MessageAndAttachment((
+                        //     ParsedMessage::Columns(columns),
+                        //     attachment_from(att),
+                        // )))
+
+                        Some(ParseYield::MessageAndAttachment((
+                            ParsedMessage::Line(msg.to_string()),
+                            attachment_from(att),
+                        )))
+                    }
                 },
                 None => None,
             };
